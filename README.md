@@ -17,7 +17,6 @@ Code and slides for the PyData Northern Utah workshop.
   `README.qmd`.
 - `README.qmd` Quarto markdown README to edit and render into
   `README.md`.
-- `_quarto.yml` Quarto project configuration file.
 - `pyproject.toml` Python project environment configuration file.
 - `uv.lock` Python project environment lockfile.
 
