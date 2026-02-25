@@ -1,0 +1,317 @@
+---
+title: "Modeling <br>Conjoint Analysis"
+subtitle: "An Introduction to the Hierarchical Bayesian Multinominal Logit"
+author: "Bowen Hickman and Marc Dotson"
+title-slide-attributes:
+  data-background-color: "#0F2439"
+format: 
+  revealjs:
+    theme: slides.scss     # Modified slides theme
+    code-copy: true        # Show code blocks copy button
+    slide-number: c/t      # Numbered slides current/total
+    embed-resources: true  # Render to a single HTML file
+    footer: "[github.com/marcdotson/pydata-hmnl](https://github.com/marcdotson/pydata-hmnl)"
+execute:
+  eval: false
+  echo: true
+  cache: false
+jupyter: python3
+---
+
+- MNL (w/Bambi family=multinomial)
+- HMNL (w/Bambi conditional formula syntax)
+
+## 
+
+:::::: {.columns .v-center}
+::: {.column width="40%"}
+![](../figures/pydata.png){fig-align="center" width="80%"}
+:::
+
+:::: {.column width="60%"}
+::: {.incremental}
+-   Club and professional forum to learn/retool
+-   Global network of chapters
+-   Workshops vary from beginning to advanced
+-   Polyglot (Python, Julia, R, etc.)
+-   We follow the [PyData Code of Conduct](https://pydata.org/code-of-conduct/)
+-   Join at [meetup.com/pydata-northern-utah](https://www.meetup.com/pydata-northern-utah/)
+:::
+::::
+::::::
+
+## {background-color="#288DC2"}
+
+![](../figures/hackusu-2026.png){fig-align="center" width="80%"}
+
+# Conjoint {background-color="#288DC2"}
+
+## Predicting new product success
+
+In order to predict new product success, you need to **estimate product demand**
+
+::: {.incremental}
+- New (hypothetical) products **don't exist** and can't be used in a test market
+- We can ask people their preferences, but **stated preferences** are unreliable
+- If people are bad at stating preferences, they're good at **making choices**, so let's us get at their **revealed preferences**
+- If you can estimate product demand as a function of product features and price, you can **design a new product** that you can expect to succeed
+:::
+
+::: {.fragment}
+**Conjoint analysis** is a survey-based experiment for estimating product demand where product features and price are evaluated jointly (i.e., conjointly)
+:::
+
+## {auto-animate=true}
+
+![](../figures/conjoint_earbuds-task.png){fig-align="center"}
+
+## {auto-animate=true}
+
+:::: {.columns .v-center}
+
+::: {.column width="50%"}
+![](../figures/conjoint_earbuds-task.png){fig-align="center"}
+:::
+
+::: {.column width="50%"}
+::: {.incremental}
+- Products are defined by **attributes**, each with a number of **levels**
+- Respondents choose from among product **alternatives**
+- **Respondent-level preferences** are estimated for each attribute level
+- Preference estimates are used to make **counterfactual predictions** in a simulated market
+- **Market simulators** inform new product development, pricing, product line optimization, etc.
+:::
+:::
+
+::::
+
+## 
+
+![](../figures/conjoint_market-simulator.png){fig-align="center"}
+
+# Multilevel Modeling {background-color="#288DC2"}
+
+## 
+
+::: {.v-center}
+$$
+\Large{U_{hj} = \beta_{h1}x_{j1} + \beta_{h2}x_{j2} + \cdots + \beta_{hk}x_{jk} + \epsilon_{hj}}
+$$
+:::
+
+## {visibility="uncounted"}
+
+::: {.v-center}
+$$
+\Large{\color{grey}{U_{hj} = \beta_{h1}\color{black}{x_{j1}} + \beta_{h2}\color{black}{x_{j2}} + \cdots + \beta_{hk}\color{black}{x_{jk}} + \epsilon_{hj}}}
+$$
+:::
+
+## {visibility="uncounted"}
+
+::: {.v-center}
+$$
+\Large{\color{grey}{U_{hj} = \color{black}{\beta_{h1}}x_{j1} + \color{black}{\beta_{h2}}x_{j2} + \cdots + \color{black}{\beta_{hk}}x_{jk} + \epsilon_{hj}}}
+$$
+:::
+
+## {visibility="uncounted"}
+
+::: {.v-center}
+$$
+\Large{\color{grey}{U_{hj} = \color{black}{\beta_{\color{red}{h}1}}x_{j1} + \color{black}{\beta_{\color{red}{h}2}}x_{j2} + \cdots + \color{black}{\beta_{\color{red}{h}k}}x_{jk} + \epsilon_{hj}}}
+$$
+:::
+
+## 
+
+:::: {.columns .v-center .h-center}
+
+::: {.column width="33.33%"}
+**Complete pooling**
+
+Groups have the same parameters from one model
+:::
+
+::: {.fragment fragment-index=3 .column width="33.33%"}
+**Partial pooling**
+
+Each group has their own parameters but they **pool information** in one model
+:::
+
+::: {.fragment fragment-index=2 .column width="33.33%"}
+**No pooling**
+
+Each group has their own parameters from separate models
+:::
+
+::::
+
+## 
+
+![](../figures/meme_multilevel-names.png){fig-align="center"}
+
+## Multilevel logistic regression
+
+$$
+\large{y_{hj} \sim \text{Binomial}(1, p_{hj})} \\
+\large{\log\left({p_{hj} \over 1 - p_{hj}}\right) = \beta_{h0} + \beta_{h1} x_{j1} + \cdots + \beta_{hp} x_{jp}}
+$$
+
+::: {.incremental}
+- The $h$ index references the **group** that observation $i$ belongs to
+- We can condition the intercept $\beta_{h0}$, slopes $\beta_{hp}$, or both by group
+- This allows us to capture **heterogeneous effects** across groups
+- Using **Bayesian inference** gives us **adaptive regularization**
+:::
+
+# Bayesian Inference {background-color="#288DC2"}
+
+## 
+
+:::: {.columns .v-center}
+
+::: {.column width="100%"}
+![](../../figures/frequentist-panel.png){fig-align="center"}
+:::
+
+::::
+
+## 
+
+:::: {.columns .v-center}
+
+::: {.column width="100%"}
+![](../../figures/bayesian-triptych.png){fig-align="center"}
+:::
+
+::::
+
+## 
+
+:::: {.columns}
+
+::: {.column width="50%"}
+::: {.fragment}
+### Frequentist
+:::
+
+::: {.incremental}
+- **Data** $X, Y$ is a random variable
+- Parameter estimates are **point estimates**
+- **Confidence intervals** are a collection of theoretical point estimates
+:::
+:::
+
+::: {.column width="50%"}
+::: {.fragment}
+### Bayesian
+:::
+
+::: {.incremental}
+- **Parameters** $\beta$ are random variables
+- Parameter estimates are **posterior distributions**
+- **Credible intervals** are summaries of posterior distributions
+:::
+:::
+
+::::
+
+## 
+
+![](../../figures/plot_log-price-estimate.png){fig-align="center" width="85%"}
+
+## Fitting Bayesian models with Bambi
+
+Fitting a Bayesian model using Bambi (i.e., Bayesian Model-Building Interface in Python) is similar to fitting a frequentist model using statsmodels
+
+```{python}
+#| eval: false
+#| code-line-numbers: "|1,4-9|2,11-16"
+
+import statsmodels.formula.api as smf
+import bambi as bmb
+
+# Fit a frequentist logistic regression
+fr_fit = smf.glm(
+  'y ~ x1 + x2 + x3', 
+  data = conjoint_data,
+  family = sm.families.Binomial()
+).fit()
+
+# Fit a Bayesian logistic regression
+ba_fit = bmb.Model(
+  'y ~ x1 + x2 + x3', 
+  data = conjoint_data,
+  family = 'bernoulli'
+).fit()
+```
+
+::: {.fragment}
+So why fit a Bayesian model?
+
+::: {.incremental}
+- Incorporate **prior information** into your model
+- **Quantify uncertainty** directly in the form of a **posterior distribution**
+- Get **adaptive regularization** as part of a **multilevel model**
+:::
+:::
+
+# Multinomial Logit {background-color="#288DC2"}
+
+## Multinomial logit model
+
+$$
+\large{y_{hj} \sim \text{Binomial}(1, p_{hj})} \\
+\large{\log\left({p_{hj} \over 1 - p_{hj}}\right) = \beta_{h0} + \beta_{h1} x_{j1} + \cdots + \beta_{hp} x_{jp}}
+$$
+
+::: {.incremental}
+- The $h$ index references the **group** that observation $i$ belongs to
+- We can condition the intercept $\beta_{h0}$, slopes $\beta_{hp}$, or both by group
+- This allows us to capture **heterogeneous effects** across groups
+- Using **Bayesian inference** gives us **adaptive regularization**
+:::
+
+## Categorical data
+
+```{python}
+#| eval: true
+#| echo: false
+
+import numpy as np
+import polars as pl
+import bambi as bmb
+
+# Set randomization seed
+rng = np.random.default_rng(42)
+
+# Specify a function to simulate data
+def sim_data(n, betas):
+  group = rng.integers(0, 5, size=n)
+
+  x1 = rng.normal(10, 3, size=n)
+  x2 = rng.binomial(1, 0.5, size=n)
+  x3 = rng.normal(5, 2, size=n)
+
+  X = np.column_stack([np.ones(n), x1, x2, x3])
+  prob_y = (np.exp(X @ betas) / (1 + np.exp(X @ betas)))
+  y = rng.binomial(1, prob_y, size=n)
+
+  return group, y, x1, x2, x3
+
+# Simulate data
+data_arr = sim_data(n = 500, betas = np.array([-0.7, -0.3, -0.5, 0.2]))
+data_df = pl.DataFrame(data_arr, schema = ['group', 'y', 'x1', 'x2', 'x3']).to_pandas()
+```
+
+## Fitting a multinomial logit model with Bambi
+
+# Hierarchical Multinomial Logit {background-color="#288DC2"}
+
+
+
+## {background-color="#288DC2"}
+
+![](../figures/pydata-northern-utah_2026-02-26-27.png){fig-align="center" width="80%"}
+
