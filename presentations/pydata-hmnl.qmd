@@ -18,9 +18,6 @@ execute:
 jupyter: python3
 ---
 
-- MNL (w/Bambi family=multinomial)
-- HMNL (w/Bambi conditional formula syntax)
-
 ## 
 
 :::::: {.columns .v-center}
@@ -192,9 +189,7 @@ $$
 :::: {.columns}
 
 ::: {.column width="50%"}
-::: {.fragment}
 ### Frequentist
-:::
 
 ::: {.incremental}
 - **Data** $X, Y$ is a random variable
@@ -204,9 +199,7 @@ $$
 :::
 
 ::: {.column width="50%"}
-::: {.fragment}
 ### Bayesian
-:::
 
 ::: {.incremental}
 - **Parameters** $\beta$ are random variables
@@ -222,8 +215,6 @@ $$
 ![](../../figures/plot_log-price-estimate.png){fig-align="center" width="85%"}
 
 ## Fitting Bayesian models with Bambi
-
-Fitting a Bayesian model using Bambi (i.e., Bayesian Model-Building Interface in Python) is similar to fitting a frequentist model using statsmodels
 
 ```{python}
 #| eval: false
@@ -259,57 +250,79 @@ So why fit a Bayesian model?
 
 # Multinomial Logit {background-color="#288DC2"}
 
-## Multinomial logit model
+## Multinomial logit
 
 $$
-\large{y_{hj} \sim \text{Binomial}(1, p_{hj})} \\
-\large{\log\left({p_{hj} \over 1 - p_{hj}}\right) = \beta_{h0} + \beta_{h1} x_{j1} + \cdots + \beta_{hp} x_{jp}}
+\large{y_{j} \sim \text{Multinomial}(n_{jk}, p_{jk})} \\
+\large{\log\left({p_{jk} \over \sum_k p_{jk}}\right) = \beta_{0} + \beta_{1} x_{j1} + \cdots + \beta_{p} x_{jp}}
 $$
 
 ::: {.incremental}
-- The $h$ index references the **group** that observation $i$ belongs to
-- We can condition the intercept $\beta_{h0}$, slopes $\beta_{hp}$, or both by group
-- This allows us to capture **heterogeneous effects** across groups
-- Using **Bayesian inference** gives us **adaptive regularization**
+- The multinomial logit is a **generalization of logistic regression**
+- Also referred to as **multinomial logistic regression**, **multiclass logistic regression**, and **categorical regression**
+- The outcome is a **categorical variable** with more than two categories
 :::
 
-## Categorical data
+## Fitting a multinomial logit with Bambi
 
 ```{python}
-#| eval: true
-#| echo: false
+#| eval: false
+#| code-line-numbers: "|5"
 
-import numpy as np
-import polars as pl
-import bambi as bmb
-
-# Set randomization seed
-rng = np.random.default_rng(42)
-
-# Specify a function to simulate data
-def sim_data(n, betas):
-  group = rng.integers(0, 5, size=n)
-
-  x1 = rng.normal(10, 3, size=n)
-  x2 = rng.binomial(1, 0.5, size=n)
-  x3 = rng.normal(5, 2, size=n)
-
-  X = np.column_stack([np.ones(n), x1, x2, x3])
-  prob_y = (np.exp(X @ betas) / (1 + np.exp(X @ betas)))
-  y = rng.binomial(1, prob_y, size=n)
-
-  return group, y, x1, x2, x3
-
-# Simulate data
-data_arr = sim_data(n = 500, betas = np.array([-0.7, -0.3, -0.5, 0.2]))
-data_df = pl.DataFrame(data_arr, schema = ['group', 'y', 'x1', 'x2', 'x3']).to_pandas()
+# Fit a Bayesian multinomial logit
+ba_fit = bmb.Model(
+  'y ~ x1 + x2 + x3', 
+  data = conjoint_data,
+  family = 'categorical'
+).fit()
 ```
-
-## Fitting a multinomial logit model with Bambi
 
 # Hierarchical Multinomial Logit {background-color="#288DC2"}
 
+## Hierarchical multinomial logit
 
+$$
+\large{y_{hj} \sim \text{Multinomial}(n_{jk}, p_{hjk})} \\
+\large{\log\left({p_{hjk} \over \sum_k p_{hjk}}\right) = \beta_{h0} + \beta_{h1} x_{j1} + \cdots + \beta_{hp} x_{jp}}
+$$
+
+::: {.incremental}
+- A **hierarchical model** is a multilevel model where the outcomes are **nested** (e.g., choices nested within respondents)
+- The hierarchical multinomial logit (HMNL) is a **generalization of hierarchical logistic regression**
+- The outcome is a **categorical variable** with more than two categories where there are multiple outcomes per group (e.g., multiple choices per respondent)
+:::
+
+## Fitting an HMNL with Bambi
+
+We can have all of our parameters vary by group (i.e., **random effects**)
+
+```{python}
+#| eval: false
+#| code-line-numbers: "|3"
+
+# Fit a Bayesian hierarchical multinomial logit
+ba_fit = bmb.Model(
+  'y ~ (x1 + x2 + x3 | group)', 
+  data = conjoint_data,
+  family = 'categorical'
+).fit()
+```
+
+## Fitting an HMNL with Bambi
+
+Or we can have some parameters vary by group and some not (i.e., **mixed effects**)
+
+```{python}
+#| eval: false
+#| code-line-numbers: "|3"
+
+# Fit a Bayesian hierarchical multinomial logit
+ba_fit = bmb.Model(
+  'y ~ (1 | group) + x1 + x2 + x3', 
+  data = conjoint_data,
+  family = 'categorical'
+).fit()
+```
 
 ## {background-color="#288DC2"}
 
