@@ -229,7 +229,6 @@ import numpy as np
 import polars as pl
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
-import bambi as bmb
 
 # Set randomization seed
 rng = np.random.default_rng(42)
@@ -253,14 +252,9 @@ conjoint_data = pl.DataFrame(data_arr, schema = ['y', 'x1', 'x2', 'x3']).to_pand
 
 ```{python}
 #| eval: true
-#| code-line-numbers: "|1,3-8|2,10-15"
+#| code-line-numbers: "|1|3-8|5|6|7"
 
-# Frequentist logistic regression
-bin_mod = smf.glm(
-  'y ~ x1 + x2 + x3', 
-  data = conjoint_data,
-  family = sm.families.Binomial()
-)
+import bambi as bmb
 
 # Bayesian logistic regression
 bin_mod = bmb.Model(
@@ -327,6 +321,7 @@ conjoint_data['y'] = conjoint_data['y'].astype('category')
 
 ```{python}
 #| eval: true
+#| code-line-numbers: "|1-6|3|4|5"
 
 # Bayesian multinomial logit
 cat_mod = bmb.Model(
@@ -353,16 +348,17 @@ $$
 - The outcome is a **categorical variable** with more than two categories where there are multiple outcomes per group (e.g., multiple choices per respondent)
 :::
 
-## Bayesian HMNL
+## Bayesian hierarchical multinomial logit
 
-We can have all of our parameters vary by group (i.e., **random effects**)
+We can have just the intercept parameter vary by group (i.e., **random intercepts**)
 
 ```{python}
 #| eval: true
+#| code-line-numbers: "|3"
 
-# Specify a Bayesian hierarchical multinomial logit
+# Bayesian hierarchical multinomial logit
 hmnl_mod = bmb.Model(
-  'y ~ (x1 + x2 + x3 | group)', 
+  'y ~ (1 | group) + x1 + x2 + x3', 
   data = conjoint_data,
   family = 'categorical'
 )
@@ -370,16 +366,35 @@ hmnl_mod = bmb.Model(
 hmnl_mod
 ```
 
-## Bayesian HMNL
+## Bayesian hierarchical multinomial logit
 
-Or we can have some parameters vary by group and some not (i.e., **mixed effects**)
+Or we can have just some slope parameters vary by group (i.e., **random slopes**)
 
 ```{python}
 #| eval: true
+#| code-line-numbers: "|3"
 
-# Specify a Bayesian hierarchical multinomial logit
+# Bayesian hierarchical multinomial logit
 hmnl_mod = bmb.Model(
-  'y ~ (1 | group) + x1 + x2 + x3', 
+  'y ~ x1 + x2 + (x3 | group)', 
+  data = conjoint_data,
+  family = 'categorical'
+)
+
+hmnl_mod
+```
+
+## Bayesian hierarchical multinomial logit
+
+We can have all of our parameters vary by group (i.e., **random effects**)
+
+```{python}
+#| eval: true
+#| code-line-numbers: "|3"
+
+# Bayesian hierarchical multinomial logit
+hmnl_mod = bmb.Model(
+  'y ~ 0 + (x1 + x2 + x3 | group)', 
   data = conjoint_data,
   family = 'categorical'
 )
