@@ -39,7 +39,9 @@ jupyter: python3
 
 ## {background-color="#288DC2"}
 
+::: {.v-center}
 ![](../figures/hackusu-2026.png){fig-align="center" width="80%"}
+:::
 
 # Conjoint {background-color="#288DC2"}
 
@@ -122,6 +124,10 @@ $$
 
 ## 
 
+![](../figures/meme_multilevel-names.png){fig-align="center"}
+
+## 
+
 :::: {.columns .v-center .h-center}
 
 ::: {.column width="33.33%"}
@@ -144,24 +150,6 @@ Each group has their own parameters from separate models
 
 ::::
 
-## 
-
-![](../figures/meme_multilevel-names.png){fig-align="center"}
-
-## Multilevel logistic regression
-
-$$
-\large{y_{hj} \sim \text{Binomial}(1, p_{hj})} \\
-\large{\log\left({p_{hj} \over 1 - p_{hj}}\right) = \beta_{h0} + \beta_{h1} x_{j1} + \cdots + \beta_{hp} x_{jp}}
-$$
-
-::: {.incremental}
-- The $h$ index references the **group** that observation $i$ belongs to
-- We can condition the intercept $\beta_{h0}$, slopes $\beta_{hp}$, or both by group
-- This allows us to capture **heterogeneous effects** across groups
-- Using **Bayesian inference** gives us **adaptive regularization**
-:::
-
 # Bayesian Inference {background-color="#288DC2"}
 
 ## 
@@ -169,7 +157,7 @@ $$
 :::: {.columns .v-center}
 
 ::: {.column width="100%"}
-![](../../figures/frequentist-panel.png){fig-align="center"}
+![](../figures/frequentist-panel.png){fig-align="center"}
 :::
 
 ::::
@@ -179,27 +167,31 @@ $$
 :::: {.columns .v-center}
 
 ::: {.column width="100%"}
-![](../../figures/bayesian-triptych.png){fig-align="center"}
+![](../figures/bayesian-triptych.png){fig-align="center"}
 :::
 
 ::::
 
-## 
+## Comparing frequentist and Bayesian inference
 
 :::: {.columns}
 
 ::: {.column width="50%"}
+::: {.fragment}
 ### Frequentist
+:::
 
 ::: {.incremental}
-- **Data** $X, Y$ is a random variable
+- **Data** $X, Y$ are random variables
 - Parameter estimates are **point estimates**
 - **Confidence intervals** are a collection of theoretical point estimates
 :::
 :::
 
 ::: {.column width="50%"}
+::: {.fragment}
 ### Bayesian
+:::
 
 ::: {.incremental}
 - **Parameters** $\beta$ are random variables
@@ -212,41 +204,73 @@ $$
 
 ## 
 
-![](../../figures/plot_log-price-estimate.png){fig-align="center" width="85%"}
+![](../figures/plot_log-price-estimate.png){fig-align="center" width="85%"}
 
-## Fitting Bayesian models with Bambi
+## Logistic regression
+
+$$
+\large{y_{j} \sim \text{Binomial}(1, p_{j})} \\
+\large{\log\left({p_{j} \over 1 - p_{j}}\right) = \beta_{0} + \beta_{1} x_{j1} + \cdots + \beta_{p} x_{jp}}
+$$
+
+::: {.incremental}
+- Logistic regression is a **generalized linear model** (GLM) for binary outcomes
+- Instead of modeling the mean of a normal distribution, we're modeling the probability of getting a 1
+- Every GLM has a **link function** for the linear model, and this is the logit link function
+:::
+
+## Bayesian logistic regression
 
 ```{python}
-#| eval: false
-#| code-line-numbers: "|1,4-9|2,11-16"
+#| eval: true
+#| echo: false
 
+import numpy as np
+import polars as pl
+import statsmodels.api as sm
 import statsmodels.formula.api as smf
 import bambi as bmb
 
-# Fit a frequentist logistic regression
-fr_fit = smf.glm(
+# Set randomization seed
+rng = np.random.default_rng(42)
+
+# Specify a function to simulate data
+def sim_data(n, betas):
+  x1 = rng.normal(10, 3, size=n)
+  x2 = rng.binomial(1, 0.5, size=n)
+  x3 = rng.normal(5, 2, size=n)
+
+  X = np.column_stack([np.ones(n), x1, x2, x3])
+  prob_y = (np.exp(X @ betas) / (1 + np.exp(X @ betas)))
+  y = rng.binomial(1, prob_y, size=n)
+
+  return y, x1, x2, x3
+
+# Simulate data
+data_arr = sim_data(n = 500, betas = np.array([-0.7, -0.3, -0.5, 0.2]))
+conjoint_data = pl.DataFrame(data_arr, schema = ['y', 'x1', 'x2', 'x3']).to_pandas()
+```
+
+```{python}
+#| eval: true
+#| code-line-numbers: "|1,3-8|2,10-15"
+
+# Frequentist logistic regression
+bin_mod = smf.glm(
   'y ~ x1 + x2 + x3', 
   data = conjoint_data,
   family = sm.families.Binomial()
-).fit()
+)
 
-# Fit a Bayesian logistic regression
-ba_fit = bmb.Model(
+# Bayesian logistic regression
+bin_mod = bmb.Model(
   'y ~ x1 + x2 + x3', 
   data = conjoint_data,
   family = 'bernoulli'
-).fit()
+)
+
+bin_mod
 ```
-
-::: {.fragment}
-So why fit a Bayesian model?
-
-::: {.incremental}
-- Incorporate **prior information** into your model
-- **Quantify uncertainty** directly in the form of a **posterior distribution**
-- Get **adaptive regularization** as part of a **multilevel model**
-:::
-:::
 
 # Multinomial Logit {background-color="#288DC2"}
 
@@ -263,18 +287,55 @@ $$
 - The outcome is a **categorical variable** with more than two categories
 :::
 
-## Fitting a multinomial logit with Bambi
+## Bayesian multinomial logit
 
 ```{python}
-#| eval: false
-#| code-line-numbers: "|5"
+#| eval: true
+#| echo: false
 
-# Fit a Bayesian multinomial logit
-ba_fit = bmb.Model(
+# Specify a function to simulate data
+def sim_data(n, betas):
+  group = rng.integers(0, 5, size=n)
+
+  x1 = rng.normal(10, 3, size=n)
+  x2 = rng.binomial(1, 0.5, size=n)
+  x3 = rng.normal(5, 2, size=n)
+
+  X = np.column_stack([np.ones(n), x1, x2, x3])
+  eta = X @ betas.T
+
+  exp_eta = np.exp(eta)
+  prob_y = exp_eta / exp_eta.sum(axis=1, keepdims=True)
+  y = rng.multinomial(1, prob_y).argmax(axis=1)
+
+  return group, y, x1, x2, x3
+
+# Example: 3 outcome categories
+betas = np.array([
+  [-0.7, -0.3, -0.5,  0.2],
+  [ 0.2,  0.1, -0.2, -0.1],
+  [ 0.0,  0.2,  0.4, -0.3],
+  [-0.5, -0.1, -0.2,  0.3],
+  [ 0.1,  -0.2,  0.2, 0.1],
+])
+
+# Simulate data
+data_arr = sim_data(n = 500, betas = betas)
+conjoint_data = pl.DataFrame(data_arr, schema = ['group', 'y', 'x1', 'x2', 'x3']).to_pandas()
+conjoint_data['y'] = conjoint_data['y'].astype('category')
+```
+
+```{python}
+#| eval: true
+
+# Bayesian multinomial logit
+cat_mod = bmb.Model(
   'y ~ x1 + x2 + x3', 
   data = conjoint_data,
   family = 'categorical'
-).fit()
+)
+
+cat_mod
 ```
 
 # Hierarchical Multinomial Logit {background-color="#288DC2"}
@@ -292,39 +353,43 @@ $$
 - The outcome is a **categorical variable** with more than two categories where there are multiple outcomes per group (e.g., multiple choices per respondent)
 :::
 
-## Fitting an HMNL with Bambi
+## Bayesian HMNL
 
 We can have all of our parameters vary by group (i.e., **random effects**)
 
 ```{python}
-#| eval: false
-#| code-line-numbers: "|3"
+#| eval: true
 
-# Fit a Bayesian hierarchical multinomial logit
-ba_fit = bmb.Model(
+# Specify a Bayesian hierarchical multinomial logit
+hmnl_mod = bmb.Model(
   'y ~ (x1 + x2 + x3 | group)', 
   data = conjoint_data,
   family = 'categorical'
-).fit()
+)
+
+hmnl_mod
 ```
 
-## Fitting an HMNL with Bambi
+## Bayesian HMNL
 
 Or we can have some parameters vary by group and some not (i.e., **mixed effects**)
 
 ```{python}
-#| eval: false
-#| code-line-numbers: "|3"
+#| eval: true
 
-# Fit a Bayesian hierarchical multinomial logit
-ba_fit = bmb.Model(
+# Specify a Bayesian hierarchical multinomial logit
+hmnl_mod = bmb.Model(
   'y ~ (1 | group) + x1 + x2 + x3', 
   data = conjoint_data,
   family = 'categorical'
-).fit()
+)
+
+hmnl_mod
 ```
 
 ## {background-color="#288DC2"}
 
+::: {.v-center}
 ![](../figures/pydata-northern-utah_2026-02-26-27.png){fig-align="center" width="80%"}
+:::
 
